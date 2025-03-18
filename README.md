@@ -1,4 +1,4 @@
-# Arabic Language Correction - Usage Guide
+# LASEN (لَسِنْ) Arabic Language Correction - Usage Guide
 
 This guide will help you set up and run the Arabic language correction system which uses Gemini AI for more accurate Arabic text correction.
 
