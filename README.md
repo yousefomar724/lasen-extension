@@ -110,3 +110,7 @@ The project consists of two main parts:
 - `GET /api/corrections`: Retrieves correction history
   - Query parameters: `page` (default: 1), `limit` (default: 20)
   - Response: List of past corrections with pagination
+
+## Acknowledgments
+
+Special thanks to the Salam Hackathon for making this project possible. The hackathon provided the platform, resources, and inspiration needed to create this Arabic language correction tool. We're grateful for the opportunity to contribute to improving Arabic digital communication through technology.
