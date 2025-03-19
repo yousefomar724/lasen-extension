@@ -1,15 +1,19 @@
-import express from "express"
+import express from 'express';
 import {
-  correctText,
-  getCorrectionHistory,
-} from "../controllers/correctionController.js"
+	correctText,
+	getCorrectionHistory,
+	validateText,
+} from '../controllers/correctionController.js';
 
-const router = express.Router()
+const router = express.Router();
 
 // POST /api/correct
-router.post("/correct", correctText)
+router.post('/correct', correctText);
+
+// POST /api/validate
+router.post('/validate', validateText);
 
 // GET /api/corrections
-router.get("/corrections", getCorrectionHistory)
+router.get('/corrections', getCorrectionHistory);
 
-export default router
+export default router;

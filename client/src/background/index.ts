@@ -3,12 +3,15 @@
 // Background script for the Arabic Linguistic Correction extension
 console.log('Background script loaded');
 
-// API endpoint for the correction service
-const API_URL = 'http://localhost:5000/api/correct';
+// API endpoints
+const API_URL = 'http://localhost:5000/api';
+const CORRECT_ENDPOINT = `${API_URL}/correct`;
+const VALIDATE_ENDPOINT = `${API_URL}/validate`;
 
 // Listen for messages from content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 	try {
+		// Handle text correction request
 		if (message.type === 'CORRECT_TEXT') {
 			console.log('Background received correction request:', message.text);
 
@@ -52,6 +55,59 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 			return true; // Required for async response
 		}
+
+		// Handle text validation request
+		else if (message.type === 'VALIDATE_TEXT') {
+			console.log('Background received validation request:', message.text);
+
+			// Get the text to validate
+			const arabicText = message.text;
+
+			// Implement a timeout to ensure we always respond
+			const responseTimeout = setTimeout(() => {
+				console.warn('Validation timeout - returning empty result');
+				try {
+					sendResponse({ incorrectWords: [] });
+				} catch (error) {
+					console.error('Error sending validation timeout response:', error);
+				}
+			}, 3000); // 3 second timeout for validation
+
+			// Call the API to validate the text
+			validateTextWithAPI(arabicText)
+				.then((validationResult) => {
+					clearTimeout(responseTimeout);
+					console.log('Text validation results:', validationResult);
+
+					// Add additional logging to see what we're sending to content script
+					if (validationResult && validationResult.incorrectWords) {
+						console.log(
+							`Sending ${validationResult.incorrectWords.length} incorrect words to content script:`,
+							JSON.stringify(validationResult.incorrectWords)
+						);
+					} else {
+						console.warn('No incorrect words to send to content script');
+					}
+
+					try {
+						sendResponse(validationResult);
+					} catch (error) {
+						console.error('Error sending validation response:', error);
+					}
+				})
+				.catch((error) => {
+					clearTimeout(responseTimeout);
+					console.error('Error validating text:', error);
+					// Return empty results on error
+					try {
+						sendResponse({ incorrectWords: [] });
+					} catch (error) {
+						console.error('Error sending fallback validation response:', error);
+					}
+				});
+
+			return true; // Required for async response
+		}
 	} catch (error) {
 		console.error('Error handling message in background script:', error);
 		try {
@@ -67,46 +123,96 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function correctTextWithAPI(text: string): Promise<string> {
 	console.log('Calling API to correct text:', text);
 	try {
-		const response = await fetch(API_URL, {
+		const response = await fetch(CORRECT_ENDPOINT, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
 			},
-			body: JSON.stringify({ text, source: 'extension' }),
+			body: JSON.stringify({ text }),
 		});
 
-		console.log('API response status:', response.status);
-
 		if (!response.ok) {
-			throw new Error(`API error: ${response.status}`);
+			throw new Error(`API responded with status: ${response.status}`);
 		}
 
 		const data = await response.json();
-		console.log('API response data:', data);
-
-		if (!data || !data.data || !data.data.correctedText) {
-			throw new Error('Invalid response format from API');
-		}
-
-		return data.data.correctedText;
+		return data.success && data.data.correctedText
+			? data.data.correctedText
+			: text;
 	} catch (error) {
-		console.error('API call failed:', error);
+		console.error('API error:', error);
 		throw error;
 	}
 }
 
-// Fallback mock function for Arabic text correction
-// Used only if the API request fails
+// Function to call the validation API
+async function validateTextWithAPI(text: string): Promise<{
+	incorrectWords: Array<{
+		word: string;
+		startIndex: number;
+		endIndex: number;
+		suggestions?: string[];
+	}>;
+}> {
+	console.log('Calling API to validate text:', text);
+	try {
+		const response = await fetch(VALIDATE_ENDPOINT, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ text }),
+		});
+
+		if (!response.ok) {
+			console.error(
+				`Validation API error: ${response.status}, ${await response.text()}`
+			);
+			throw new Error(
+				`Validation API responded with status: ${response.status}`
+			);
+		}
+
+		// Log raw response for debugging
+		const responseText = await response.text();
+		console.log('Raw validation response:', responseText);
+
+		// Parse the JSON response
+		let data;
+		try {
+			data = JSON.parse(responseText);
+		} catch (parseError) {
+			console.error('JSON parse error:', parseError, 'Raw text:', responseText);
+			throw new Error('Failed to parse validation response as JSON');
+		}
+
+		// Check response structure
+		if (!data.success) {
+			console.error('Validation API returned error:', data);
+			return { incorrectWords: [] };
+		}
+
+		// Ensure data.data exists and has incorrectWords array
+		if (
+			data.data &&
+			data.data.incorrectWords &&
+			Array.isArray(data.data.incorrectWords)
+		) {
+			console.log('Valid validation result:', data.data);
+			return data.data;
+		} else {
+			console.error('Validation API returned unexpected data structure:', data);
+			return { incorrectWords: [] };
+		}
+	} catch (error) {
+		console.error('Validation API error:', error);
+		throw error;
+	}
+}
+
+// Mock correction function for fallback
 function mockArabicCorrection(text: string): string {
-	console.log('Using mock correction for:', text);
-
-	// This is a placeholder. In a real implementation, you would:
-	// 1. Send the text to an Arabic NLP API
-	// 2. Apply grammatical and spelling corrections
-	// 3. Return the corrected text
-
-	// For demo purposes, let's just make a simple replacement
-	// Replace common typos or errors (this is just an example)
+	// Simple replacements for common Arabic errors
 	const corrections: { [key: string]: string } = {
 		انا: 'أنا',
 		هاذا: 'هذا',
@@ -115,21 +221,10 @@ function mockArabicCorrection(text: string): string {
 	};
 
 	let correctedText = text;
-	let changes = false;
-
 	Object.keys(corrections).forEach((error) => {
 		const regex = new RegExp(error, 'g');
-		if (regex.test(text)) {
-			changes = true;
-			correctedText = correctedText.replace(regex, corrections[error]);
-		}
+		correctedText = correctedText.replace(regex, corrections[error]);
 	});
-
-	// If no changes were made but we still need to respond, make a small change
-	// This helps users see that something happened even in fallback mode
-	if (!changes && text.trim().length > 0) {
-		correctedText = text + ' ✓';
-	}
 
 	return correctedText;
 }

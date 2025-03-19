@@ -30,12 +30,65 @@ const BUTTON_STYLES = `
   background-color: #4285f4;
   color: white;
   border: none;
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 12px;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
   cursor: pointer;
-  margin-left: 4px;
-  font-family: Arial, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s ease;
+  padding: 0;
+  overflow: hidden;
+  transform: scale(1);
+`;
+
+// Hover styles
+const BUTTON_HOVER_STYLES = {
+	backgroundColor: '#3367d6', // Darker blue on hover
+	transform: 'scale(1.1)', // Slight zoom effect
+	boxShadow: '0 3px 7px rgba(0, 0, 0, 0.3)',
+};
+
+// Correction icon SVG (pen icon in React Icons style)
+// This is based on a common "edit" icon from React Icons libraries
+const CORRECTION_ICON = `
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: auto;">
+  <path d="M12 20h9"></path>
+  <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+</svg>
+`;
+
+// CSS for highlighting incorrect words
+const HIGHLIGHT_STYLES = `
+  .arabic-correction-highlight {
+    position: relative !important;
+    display: inline-block !important;
+    color: inherit !important;
+    padding-bottom: 2px !important;
+  }
+  
+  .arabic-correction-highlight::after {
+    content: '' !important;
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 3px !important;
+    background-color: #f44336 !important;
+    border-radius: 1.5px !important;
+    z-index: 1 !important;
+    pointer-events: none !important;
+    animation: arabic-correction-pulse 2s infinite !important;
+  }
+  
+  @keyframes arabic-correction-pulse {
+    0% { opacity: 0.7; }
+    50% { opacity: 1; }
+    100% { opacity: 0.7; }
+  }
 `;
 
 // Load user settings from storage
@@ -155,13 +208,25 @@ function addCorrectionButtons() {
 		if (buttonIndex < buttonPool.length) {
 			button = buttonPool[buttonIndex];
 			buttonIndex++;
+
+			// Update the HTML content and styles of the reused button
+			button.innerHTML = CORRECTION_ICON;
+			button.style.cssText = BUTTON_STYLES;
+			button.title = 'تصحيح النص'; // Add tooltip: "Correct text" in Arabic
+
+			// Ensure icon is centered
+			ensureIconCentered(button);
 		} else {
 			// Create a new button if none available in the pool
 			button = document.createElement('button');
-			button.textContent = 'تصحيح'; // "Correct" in Arabic
+			button.innerHTML = CORRECTION_ICON;
 			button.className = 'arabic-correction-button';
 			button.style.cssText = BUTTON_STYLES;
 			button.style.display = 'none';
+			button.title = 'تصحيح النص'; // Add tooltip: "Correct text" in Arabic
+
+			// Ensure icon is centered
+			ensureIconCentered(button);
 
 			// Generate a unique ID for the button
 			const buttonId =
@@ -202,6 +267,9 @@ function addCorrectionButtons() {
 
 		// Update event handlers
 		setupButtonEvents(button, element);
+
+		// Set up validation for this element
+		setupValidation(element);
 	}
 }
 
@@ -264,8 +332,32 @@ function setupButtonEvents(button: HTMLButtonElement, field: HTMLElement) {
 function updateButtonPosition(button: HTMLButtonElement, field: HTMLElement) {
 	const fieldRect = field.getBoundingClientRect();
 
-	button.style.top = `${window.scrollY + fieldRect.top}px`;
-	button.style.left = `${window.scrollX + fieldRect.right + 5}px`;
+	// Position the button to the right of the field with a small gap
+	const gap = 8; // Gap between field and button
+	const buttonSize = 28; // Button size is now 28px
+
+	// Center vertically with the field
+	const topPosition =
+		window.scrollY + fieldRect.top + (fieldRect.height - buttonSize) / 2;
+
+	// Position to the right of the field (outside)
+	const leftPosition = window.scrollX + fieldRect.right + gap;
+
+	button.style.top = `${topPosition}px`;
+	button.style.left = `${leftPosition}px`;
+
+	// Add hover effect
+	button.onmouseover = () => {
+		button.style.backgroundColor = '#3367d6';
+		button.style.transform = 'scale(1.1)';
+		button.style.boxShadow = '0 3px 7px rgba(0, 0, 0, 0.3)';
+	};
+
+	button.onmouseout = () => {
+		button.style.backgroundColor = '#4285f4';
+		button.style.transform = 'scale(1)';
+		button.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.25)';
+	};
 }
 
 // Correct the text in a field
@@ -290,6 +382,17 @@ function correctText(field: HTMLElement) {
 
 		// Check if chrome.runtime is available
 		if (typeof chrome !== 'undefined' && chrome.runtime) {
+			// Check if extension context is still valid
+			if (chrome.runtime.id === undefined) {
+				console.warn(
+					'Extension context has been invalidated while correcting text'
+				);
+				// Fall back to local correction
+				const correctedText = localArabicCorrection(text);
+				applyCorrection(field, correctedText);
+				return;
+			}
+
 			// Send to background script for correction
 			try {
 				chrome.runtime.sendMessage(
@@ -300,10 +403,17 @@ function correctText(field: HTMLElement) {
 					(response) => {
 						// Check for runtime.lastError
 						if (chrome.runtime.lastError) {
-							console.error(
-								'Error sending to background:',
-								chrome.runtime.lastError.message
-							);
+							const errorMessage = chrome.runtime.lastError.message || '';
+							console.error('Error sending to background:', errorMessage);
+
+							// If the error is about invalidated context, attempt recovery
+							if (errorMessage.includes('invalidated')) {
+								console.warn(
+									'Extension context has been invalidated during correction'
+								);
+								// We can still correct text locally
+							}
+
 							// Fall back to local correction
 							const correctedText = localArabicCorrection(text);
 							applyCorrection(field, correctedText);
@@ -327,6 +437,18 @@ function correctText(field: HTMLElement) {
 				);
 			} catch (error) {
 				console.error('Exception sending message:', error);
+
+				// If the extension context is invalidated, log it but still correct
+				if (
+					error instanceof Error &&
+					(error.message.includes('Extension context invalidated') ||
+						error.message.includes('Invalid extension'))
+				) {
+					console.warn(
+						'Extension context invalidated during correction - using local fallback'
+					);
+				}
+
 				// Fall back to local correction
 				const correctedText = localArabicCorrection(text);
 				applyCorrection(field, correctedText);
@@ -346,6 +468,10 @@ function correctText(field: HTMLElement) {
 
 // Helper function to apply correction to a field
 function applyCorrection(field: HTMLElement, correctedText: string) {
+	// Clear any existing highlights first
+	clearHighlights(field);
+
+	// Apply the correction
 	if (
 		field instanceof HTMLInputElement ||
 		field instanceof HTMLTextAreaElement
@@ -353,6 +479,7 @@ function applyCorrection(field: HTMLElement, correctedText: string) {
 		field.value = correctedText;
 		field.dispatchEvent(new Event('input', { bubbles: true }));
 	} else if (field.hasAttribute('contenteditable')) {
+		// Now set the corrected text
 		field.innerText = correctedText;
 		field.dispatchEvent(new InputEvent('input', { bubbles: true }));
 	}
@@ -385,95 +512,680 @@ function containsArabic(text: string): boolean {
 
 // Run when content script loads
 function init() {
-	// Load user settings first, which will call addCorrectionButtons when ready
-	loadUserSettings();
-
-	// Set up mutation observer to catch dynamic elements
-	const observer = new MutationObserver((mutations) => {
-		let shouldCheck = false;
-
-		// Check if mutations are worth processing
-		for (const mutation of mutations) {
-			// Skip our own modifications if possible
-			if (mutation.target instanceof Element) {
-				if (
-					mutation.target.classList.contains('arabic-correction-button') ||
-					mutation.target.hasAttribute('data-arabic-correction-processed')
-				) {
-					continue;
+	try {
+		// Check if extension context is valid
+		if (typeof chrome !== 'undefined' && chrome.runtime) {
+			try {
+				// This will throw if context is invalidated
+				const isValid = chrome.runtime.id !== undefined;
+				if (!isValid) {
+					console.warn('Extension context is invalidated at initialization');
+					// We still proceed with local functionality
 				}
-
-				// Skip attribute mutations on elements we've already processed
-				if (
-					mutation.type === 'attributes' &&
-					mutation.target.hasAttribute('data-arabic-correction-processed')
-				) {
-					continue;
-				}
+			} catch (e) {
+				console.warn('Error checking extension context at initialization:', e);
+				// We still proceed with local functionality
 			}
+		}
 
-			// Only care about added nodes that might contain inputs
-			if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-				// Check if any of the added nodes are elements we care about
-				for (const node of mutation.addedNodes) {
-					if (node.nodeType === Node.ELEMENT_NODE) {
-						const element = node as Element;
+		// Add styles for text highlighting
+		addHighlightStyles();
 
-						// If this is a form element or might contain form elements
-						if (
-							element.tagName === 'INPUT' ||
-							element.tagName === 'TEXTAREA' ||
-							element.hasAttribute('contenteditable') ||
-							element.querySelectorAll('input, textarea, [contenteditable]')
-								.length > 0
-						) {
-							shouldCheck = true;
-							break;
-						}
+		// Load user settings first, which will call addCorrectionButtons when ready
+		loadUserSettings();
+
+		// Set up mutation observer to catch dynamic elements
+		const observer = new MutationObserver((mutations) => {
+			let shouldCheck = false;
+
+			// Check if mutations are worth processing
+			for (const mutation of mutations) {
+				// Skip our own modifications if possible
+				if (mutation.target instanceof Element) {
+					if (
+						mutation.target.classList.contains('arabic-correction-button') ||
+						mutation.target.hasAttribute('data-arabic-correction-processed')
+					) {
+						continue;
+					}
+
+					// Skip attribute mutations on elements we've already processed
+					if (
+						mutation.type === 'attributes' &&
+						mutation.target.hasAttribute('data-arabic-correction-processed')
+					) {
+						continue;
 					}
 				}
 
-				if (shouldCheck) break;
-			}
-		}
+				// Only care about added nodes that might contain inputs
+				if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+					// Check if any of the added nodes are elements we care about
+					for (const node of mutation.addedNodes) {
+						if (node.nodeType === Node.ELEMENT_NODE) {
+							const element = node as Element;
 
-		if (shouldCheck) {
-			// Use a debounce to avoid excessive processing
-			clearTimeout(debounceTimer);
-			debounceTimer = setTimeout(() => {
-				addCorrectionButtons();
-			}, 500);
-		}
-	});
+							// If this is a form element or might contain form elements
+							if (
+								element.tagName === 'INPUT' ||
+								element.tagName === 'TEXTAREA' ||
+								element.hasAttribute('contenteditable') ||
+								element.querySelectorAll('input, textarea, [contenteditable]')
+									.length > 0
+							) {
+								shouldCheck = true;
+								break;
+							}
+						}
+					}
 
-	// Start observing
-	observer.observe(document.body, {
-		childList: true,
-		subtree: true,
-		attributes: false, // Don't need to watch attributes
-	});
-
-	// Listen for settings changes from the popup
-	if (typeof chrome !== 'undefined' && chrome.runtime) {
-		chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-			try {
-				if (message.type === 'SETTINGS_UPDATED') {
-					console.log('Settings updated, reloading...');
-					loadUserSettings();
-					// Always send a response, even if it's just to acknowledge receipt
-					sendResponse({ success: true });
+					if (shouldCheck) break;
 				}
-			} catch (error) {
-				console.error('Error handling message:', error);
-				// Send error response
-				sendResponse({ success: false, error: error.message });
 			}
 
-			// Return true to indicate we will send a response asynchronously
-			return true;
+			if (shouldCheck) {
+				// Use a debounce to avoid excessive processing
+				clearTimeout(debounceTimer);
+				debounceTimer = setTimeout(() => {
+					try {
+						addCorrectionButtons();
+					} catch (e) {
+						console.error('Error adding correction buttons:', e);
+					}
+				}, 500);
+			}
 		});
+
+		// Start observing
+		observer.observe(document.body, {
+			childList: true,
+			subtree: true,
+			attributes: false, // Don't need to watch attributes
+		});
+
+		// Listen for settings changes from the popup
+		if (typeof chrome !== 'undefined' && chrome.runtime) {
+			try {
+				chrome.runtime.onMessage.addListener(
+					(message, sender, sendResponse) => {
+						try {
+							if (message.type === 'SETTINGS_UPDATED') {
+								console.log('Settings updated, reloading...');
+								loadUserSettings();
+								// Always send a response, even if it's just to acknowledge receipt
+								sendResponse({ success: true });
+							}
+						} catch (error) {
+							console.error('Error handling message:', error);
+							// Send error response
+							sendResponse({
+								success: false,
+								error: error instanceof Error ? error.message : String(error),
+							});
+						}
+
+						// Return true to indicate we will send a response asynchronously
+						return true;
+					}
+				);
+			} catch (e) {
+				console.warn(
+					'Could not set up message listener due to extension context issues:',
+					e
+				);
+			}
+		}
+
+		console.log('Arabic correction content script initialized successfully');
+	} catch (e) {
+		console.error('Error during content script initialization:', e);
+		// Try to continue with basic functionality
+		try {
+			addHighlightStyles();
+		} catch (styleError) {
+			console.error('Could not add highlight styles:', styleError);
+		}
 	}
 }
 
 // Initialize the content script
 init();
+
+// Helper function to ensure icon is properly centered in the button
+function ensureIconCentered(button: HTMLButtonElement) {
+	// Make sure SVG is centered by styling the button's content
+	const svg = button.querySelector('svg');
+	if (svg) {
+		svg.style.display = 'block';
+		svg.style.margin = 'auto';
+		svg.style.position = 'absolute';
+		svg.style.top = '50%';
+		svg.style.left = '50%';
+		svg.style.transform = 'translate(-50%, -50%)';
+	}
+}
+
+// Add highlight styles to the page
+function addHighlightStyles() {
+	if (!document.getElementById('arabic-correction-styles')) {
+		const styleEl = document.createElement('style');
+		styleEl.id = 'arabic-correction-styles';
+		styleEl.textContent = HIGHLIGHT_STYLES;
+		document.head.appendChild(styleEl);
+	}
+}
+
+// Debounce function for validation
+function debounce<F extends (...args: any[]) => any>(
+	func: F,
+	wait: number
+): (...args: Parameters<F>) => void {
+	let timeout: ReturnType<typeof setTimeout> | null = null;
+
+	return function (...args: Parameters<F>) {
+		if (timeout) {
+			clearTimeout(timeout);
+		}
+
+		timeout = setTimeout(() => {
+			func(...args);
+			timeout = null;
+		}, wait);
+	};
+}
+
+// Set up validation and highlight for an input field
+function setupValidation(field: HTMLElement) {
+	// Different handling based on field type
+	if (
+		field instanceof HTMLInputElement ||
+		field instanceof HTMLTextAreaElement
+	) {
+		// For regular input fields and textareas
+		const validateInputDebounced = debounce((e: Event) => {
+			const text = (e.target as HTMLInputElement | HTMLTextAreaElement).value;
+			if (text && containsArabic(text)) {
+				validateText(text, field);
+			}
+		}, 800); // Debounce 800ms
+
+		field.addEventListener('input', validateInputDebounced);
+	} else if (field.hasAttribute('contenteditable')) {
+		// For contenteditable elements
+		const validateContenteditableDebounced = debounce((e: Event) => {
+			const text = (e.target as HTMLElement).innerText;
+			if (text && containsArabic(text)) {
+				validateText(text, field);
+			}
+		}, 800); // Debounce 800ms
+
+		field.addEventListener('input', validateContenteditableDebounced);
+	}
+}
+
+// Validate text and highlight incorrect words
+function validateText(text: string, field: HTMLElement) {
+	// Don't validate if field is empty or too short
+	if (!text || text.length < 2) {
+		return;
+	}
+
+	// Skip if text doesn't contain Arabic
+	if (!containsArabic(text)) {
+		return;
+	}
+
+	console.log(
+		'Validating text:',
+		text.substring(0, 20) + (text.length > 20 ? '...' : '')
+	);
+
+	// Check if chrome.runtime is available
+	if (typeof chrome !== 'undefined' && chrome.runtime) {
+		try {
+			// First check if extension context is still valid
+			if (chrome.runtime.id === undefined) {
+				console.warn(
+					'Extension context has been invalidated - reloading content script'
+				);
+				// Reload the page to re-initialize the content script
+				window.location.reload();
+				return;
+			}
+
+			chrome.runtime.sendMessage(
+				{
+					type: 'VALIDATE_TEXT',
+					text: text,
+				},
+				(response) => {
+					// Check for runtime.lastError
+					if (chrome.runtime.lastError) {
+						const errorMessage = chrome.runtime.lastError.message || '';
+						console.error('Error validating text:', errorMessage);
+
+						// If the error is about invalidated context, attempt to reload
+						if (errorMessage.includes('invalidated')) {
+							console.warn(
+								'Extension context has been invalidated - clearing state'
+							);
+							clearHighlights(field);
+							// We don't reload here as it might create an infinite loop
+							// Instead just clear any UI elements we've added
+							document
+								.querySelectorAll(
+									'.arabic-correction-button, .arabic-correction-overlay'
+								)
+								.forEach((el) => el.remove());
+						}
+						return;
+					}
+
+					console.log(
+						'Validation response received from background:',
+						response
+					);
+
+					// Verify response structure
+					if (
+						response &&
+						typeof response === 'object' &&
+						'incorrectWords' in response &&
+						Array.isArray(response.incorrectWords)
+					) {
+						console.log(
+							`Received ${response.incorrectWords.length} incorrect words for highlighting`
+						);
+
+						// Output each incorrect word for debugging
+						if (response.incorrectWords.length > 0) {
+							response.incorrectWords.forEach((word) => {
+								console.log(
+									`Word: "${word.word}" at ${word.startIndex}-${word.endIndex}`
+								);
+							});
+						}
+
+						// Apply highlighting with the incorrect words
+						highlightIncorrectWords(field, text, response.incorrectWords);
+					} else {
+						console.warn('Invalid validation response format:', response);
+						// Clear any existing highlights since we can't validate
+						clearHighlights(field);
+					}
+				}
+			);
+		} catch (error) {
+			console.error('Exception sending validation message:', error);
+
+			// If the extension context is invalidated, attempt to reload
+			if (
+				error instanceof Error &&
+				(error.message.includes('Extension context invalidated') ||
+					error.message.includes('Invalid extension'))
+			) {
+				console.warn(
+					'Detected extension context invalidation - clearing state'
+				);
+				clearHighlights(field);
+				// Remove all our UI elements
+				document
+					.querySelectorAll(
+						'.arabic-correction-button, .arabic-correction-overlay'
+					)
+					.forEach((el) => el.remove());
+
+				// Load styles again when extension is reloaded
+				addHighlightStyles();
+			}
+		}
+	}
+}
+
+// Clear highlights from a field
+function clearHighlights(field: HTMLElement) {
+	if (
+		field instanceof HTMLInputElement ||
+		field instanceof HTMLTextAreaElement
+	) {
+		// Clear border indicators
+		field.style.borderColor = '';
+		field.style.borderWidth = '';
+		field.style.borderStyle = '';
+		field.removeAttribute('data-has-incorrect-words');
+
+		// Remove any overlay
+		if (field.id) {
+			const existingOverlay = document.querySelector(
+				`[data-overlay-for="${field.id}"]`
+			);
+			if (existingOverlay) {
+				existingOverlay.remove();
+			}
+		}
+	} else if (field.hasAttribute('contenteditable')) {
+		// Clear any highlights in contenteditable
+		const highlights = field.querySelectorAll('.arabic-correction-highlight');
+		if (highlights.length > 0) {
+			highlights.forEach((h) => {
+				const parent = h.parentNode;
+				if (parent) {
+					parent.replaceChild(document.createTextNode(h.textContent || ''), h);
+				}
+			});
+			field.normalize(); // Merge adjacent text nodes
+		}
+		field.removeAttribute('data-has-incorrect-words');
+	}
+}
+
+// Highlight incorrect words in the text
+function highlightIncorrectWords(
+	field: HTMLElement,
+	text: string,
+	incorrectWords: Array<{
+		word: string;
+		startIndex: number;
+		endIndex: number;
+		suggestions?: string[];
+	}>
+) {
+	// Different handling based on field type
+	if (
+		field instanceof HTMLInputElement ||
+		field instanceof HTMLTextAreaElement
+	) {
+		// For input/textarea, we need to add a highlight overlay
+		createHighlightOverlay(field, text, incorrectWords);
+	} else if (field.hasAttribute('contenteditable')) {
+		// For contenteditable, we can modify the HTML directly
+		highlightContentEditableText(field as HTMLElement, text, incorrectWords);
+	}
+}
+
+// Create overlay div for highlighting text in inputs/textareas
+function createHighlightOverlay(
+	field: HTMLInputElement | HTMLTextAreaElement,
+	text: string,
+	incorrectWords: Array<{
+		word: string;
+		startIndex: number;
+		endIndex: number;
+		suggestions?: string[];
+	}>
+) {
+	// Remove any existing overlay
+	const existingOverlay = document.querySelector(
+		`[data-overlay-for="${field.id}"]`
+	);
+	if (existingOverlay) {
+		existingOverlay.remove();
+	}
+
+	// Clear any existing highlights
+	field.style.borderColor = '';
+	field.style.borderWidth = '';
+	field.style.borderStyle = '';
+	field.removeAttribute('data-has-incorrect-words');
+
+	// Skip if no incorrect words
+	if (incorrectWords.length === 0) {
+		return;
+	}
+
+	// Ensure field has an ID
+	if (!field.id) {
+		field.id =
+			'arabic-field-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+	}
+
+	// Mark field as having incorrect words
+	field.setAttribute('data-has-incorrect-words', 'true');
+
+	// Add a red border to indicate errors
+	field.style.borderColor = '#f44336';
+	field.style.borderWidth = '1px';
+	field.style.borderStyle = 'solid';
+
+	// Create an enhanced overlay with underlines for the incorrect words
+	try {
+		// Create an overlay container
+		const overlay = document.createElement('div');
+		overlay.style.position = 'absolute';
+		overlay.style.pointerEvents = 'none';
+		overlay.style.zIndex = '100000'; // Increased z-index to ensure visibility
+		overlay.setAttribute('data-overlay-for', field.id);
+		overlay.className = 'arabic-correction-overlay';
+
+		// Position it relative to the field
+		const rect = field.getBoundingClientRect();
+		overlay.style.top = `${rect.top + window.scrollY}px`;
+		overlay.style.left = `${rect.left + window.scrollX}px`;
+		overlay.style.width = `${rect.width}px`;
+		overlay.style.height = `${rect.height}px`;
+
+		// Check if field is RTL
+		const isRTL = getComputedStyle(field).direction === 'rtl';
+
+		// Calculate a more accurate character width based on the field's font
+		const fontStyle = getComputedStyle(field);
+		let approxCharWidth = 8; // Default fallback
+
+		// Create a more accurate character width measurement
+		const measureSpan = document.createElement('span');
+		measureSpan.style.font = fontStyle.font;
+		measureSpan.style.visibility = 'hidden';
+		measureSpan.textContent = 'ا'; // Alef - common Arabic character for measurement
+		document.body.appendChild(measureSpan);
+		const spanWidth = measureSpan.getBoundingClientRect().width;
+		document.body.removeChild(measureSpan);
+
+		if (spanWidth > 0) {
+			approxCharWidth = spanWidth;
+		}
+		console.log(`Using character width: ${approxCharWidth}px for highlighting`);
+
+		// Add underlines for each incorrect word
+		incorrectWords.forEach(({ word, startIndex, endIndex }) => {
+			console.log(
+				`Adding highlight for "${word}" at ${startIndex}-${endIndex}`
+			);
+
+			const wordText = text.substring(startIndex, endIndex);
+			const underline = document.createElement('div');
+			underline.className = 'arabic-correction-underline';
+			underline.style.position = 'absolute';
+			underline.style.height = '4px'; // Increased height for visibility
+			underline.style.backgroundColor = '#f44336';
+
+			// Place the underline at the bottom of the text line
+			// For single-line inputs, this is simpler
+			if (field instanceof HTMLInputElement) {
+				underline.style.bottom = '5px';
+			} else {
+				// For textareas, we need a different approach
+				// Simplified: place it based on line height from the top
+				// This will need enhancement for multi-line text
+				const lineHeight = parseInt(fontStyle.lineHeight) || 20;
+				const lineIndex = text.substring(0, startIndex).split('\n').length - 1;
+				underline.style.top = `${lineIndex * lineHeight + lineHeight - 5}px`;
+			}
+
+			// Calculate position based on text direction and field padding
+			const paddingLeft = parseInt(fontStyle.paddingLeft) || 0;
+			const paddingRight = parseInt(fontStyle.paddingRight) || 0;
+
+			if (isRTL) {
+				// For RTL text, calculate position from right
+				const rightPosition =
+					(text.length - endIndex) * approxCharWidth + paddingRight;
+				const width = (endIndex - startIndex) * approxCharWidth;
+
+				underline.style.right = `${rightPosition}px`;
+				underline.style.width = `${width}px`;
+			} else {
+				// For LTR text, calculate position from left
+				const leftPosition = startIndex * approxCharWidth + paddingLeft;
+				const width = (endIndex - startIndex) * approxCharWidth;
+
+				underline.style.left = `${leftPosition}px`;
+				underline.style.width = `${width}px`;
+			}
+
+			// Add a tooltip with the word
+			underline.title = wordText;
+
+			// Add wavy effect
+			underline.style.borderRadius = '2px';
+
+			// Add animation for better visibility
+			underline.style.animation = 'arabic-correction-pulse 2s infinite';
+
+			overlay.appendChild(underline);
+		});
+
+		// Add a pulsing animation for the underlines
+		const styleEl = document.createElement('style');
+		styleEl.textContent = `
+			@keyframes arabic-correction-pulse {
+				0% { opacity: 0.7; }
+				50% { opacity: 1; }
+				100% { opacity: 0.7; }
+			}
+		`;
+		overlay.appendChild(styleEl);
+
+		document.body.appendChild(overlay);
+
+		// Update overlay position on scroll and input
+		const updateOverlayPosition = () => {
+			const newRect = field.getBoundingClientRect();
+			overlay.style.top = `${newRect.top + window.scrollY}px`;
+			overlay.style.left = `${newRect.left + window.scrollX}px`;
+			overlay.style.width = `${newRect.width}px`;
+			overlay.style.height = `${newRect.height}px`;
+		};
+
+		window.addEventListener('scroll', updateOverlayPosition, { passive: true });
+		field.addEventListener('input', updateOverlayPosition);
+		window.addEventListener('resize', updateOverlayPosition, { passive: true });
+		field.addEventListener('blur', () => {
+			overlay.remove();
+			window.removeEventListener('scroll', updateOverlayPosition);
+			window.removeEventListener('resize', updateOverlayPosition);
+		});
+	} catch (error) {
+		console.error('Error creating highlight overlay:', error);
+	}
+}
+
+// Highlight incorrect words in contenteditable elements
+function highlightContentEditableText(
+	element: HTMLElement,
+	text: string,
+	incorrectWords: Array<{
+		word: string;
+		startIndex: number;
+		endIndex: number;
+		suggestions?: string[];
+	}>
+) {
+	// Skip if no incorrect words
+	if (incorrectWords.length === 0) {
+		// Clear any existing highlights
+		const highlights = element.querySelectorAll('.arabic-correction-highlight');
+		highlights.forEach((h) => {
+			const parent = h.parentNode;
+			if (parent) {
+				parent.replaceChild(document.createTextNode(h.textContent || ''), h);
+				parent.normalize(); // Merge adjacent text nodes
+			}
+		});
+		// Remove the data attribute
+		element.removeAttribute('data-has-incorrect-words');
+		return;
+	}
+
+	// Mark element as having incorrect words
+	element.setAttribute('data-has-incorrect-words', 'true');
+
+	console.log(`Highlighting ${incorrectWords.length} words in contenteditable`);
+
+	// First, get clean HTML without any previous highlights
+	let cleanHTML = element.innerHTML;
+	// Remove any existing highlights
+	const tempDiv = document.createElement('div');
+	tempDiv.innerHTML = cleanHTML;
+	const existingHighlights = tempDiv.querySelectorAll(
+		'.arabic-correction-highlight'
+	);
+	existingHighlights.forEach((node) => {
+		const text = node.textContent || '';
+		const parent = node.parentNode;
+		if (parent) {
+			parent.replaceChild(document.createTextNode(text), node);
+		}
+	});
+	cleanHTML = tempDiv.innerHTML;
+
+	// Now extract just the text content (without HTML tags)
+	tempDiv.innerHTML = cleanHTML;
+	const plainText = tempDiv.textContent || '';
+
+	// Sort words in reverse order (to avoid position shifts)
+	const sortedWords = [...incorrectWords].sort(
+		(a, b) => b.startIndex - a.startIndex
+	);
+
+	// Create a direct HTML replacement approach
+	// First, create an array from the plaintext
+	const chars = [...plainText];
+
+	// Apply highlighting by wrapping each incorrect word in a span
+	for (const word of sortedWords) {
+		try {
+			// Create the highlight span with position relative and underline positioned absolutely underneath
+			const highlightStart = `<span class="arabic-correction-highlight" data-original-word="${word.word}" style="
+				position: relative !important; 
+				display: inline-block !important;
+				color: inherit !important;
+				text-decoration: none !important;
+				padding-bottom: 2px !important;">
+				<span style="
+					position: absolute !important; 
+					bottom: 0 !important; 
+					left: 0 !important; 
+					width: 100% !important; 
+					height: 3px !important; 
+					background-color: #f44336 !important; 
+					border-radius: 1.5px !important;
+					z-index: 1 !important;
+				"></span>`;
+			const highlightEnd = '</span>';
+
+			// Insert the span tags at the appropriate positions
+			// Since we're adding HTML, we need to insert at indices in the chars array
+			chars.splice(word.endIndex, 0, highlightEnd);
+			chars.splice(word.startIndex, 0, highlightStart);
+
+			console.log(
+				`Wrapped "${word.word}" at positions ${word.startIndex}-${word.endIndex} with highlight span`
+			);
+		} catch (err) {
+			console.error(`Error highlighting word ${word.word}:`, err);
+		}
+	}
+
+	// Reconstruct the text with highlights
+	let highlightedText = chars.join('');
+
+	// Insert the highlighted text into a temporary element
+	// We'll use this to extract properly formed HTML
+	const finalDiv = document.createElement('div');
+	finalDiv.innerHTML = highlightedText;
+
+	// Finally, update the original element's HTML
+	element.innerHTML = finalDiv.innerHTML;
+
+	console.log('Applied highlights to contenteditable');
+}
