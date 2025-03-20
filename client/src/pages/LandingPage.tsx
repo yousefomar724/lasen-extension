@@ -50,7 +50,7 @@ const LandingPage = () => {
               أداة ذكية تساعدك على تحسين كتابتك باللغة العربية الفصحى، مع تصحيح
               القواعد وتحويل العامية إلى الفصحى
             </p>
-            <div className="flex gap-4">
+            <div className="flex flex-col md:flex-row gap-4">
               <Button
                 onClick={goToPopup}
                 variant="green"
@@ -75,7 +75,11 @@ const LandingPage = () => {
               <img
                 src="/imgs/hero.png"
                 alt="لسان - أداة تصحيح اللغة العربية"
-                className="w-full max-w-md mx-auto rounded-lg shadow-xl"
+                className="w-full max-w-md mx-auto rounded-lg"
+                style={{
+                  boxShadow: "0 0 30px 5px rgba(16, 185, 129, 0.4)",
+                  filter: "drop-shadow(0 0 10px rgba(16, 185, 129, 0.3))",
+                }}
               />
             </div>
           </div>
@@ -298,9 +302,9 @@ const LandingPage = () => {
         className="bg-gray-900 py-16 border-t border-gray-800"
       >
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 text-center md:text-right">
             {/* Logo and description */}
-            <div className="md:col-span-1">
+            <div className="md:col-span-1 flex flex-col items-center md:items-start">
               <h2 className="text-2xl font-bold text-[#10b981]">لِسان</h2>
               <p className="mt-2 text-gray-400">
                 أداتك الذكية لتحسين الكتابة باللغة العربية
@@ -362,7 +366,7 @@ const LandingPage = () => {
             {/* Follow Us */}
             <div className="md:col-span-1">
               <h3 className="font-bold text-lg mb-4 text-white">تابعنا</h3>
-              <div className="flex gap-4">
+              <div className="flex gap-4 justify-center md:justify-start">
                 <a
                   href="#"
                   className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition-colors"
