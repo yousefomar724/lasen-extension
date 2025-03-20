@@ -1,116 +1,103 @@
-# LASEN (لَسِنْ) Arabic Language Correction - Usage Guide
+# لِسان (Lasen) - Arabic Text Correction Extension & Landing Page
 
-This guide will help you set up and run the Arabic language correction system which uses Gemini AI for more accurate Arabic text correction.
+A comprehensive solution for Arabic text correction, including a browser extension and a landing page.
 
-## System Architecture
+## Project Structure
 
-The project consists of two main parts:
+The project consists of three main components:
 
-1. **Browser Extension (Client)**: A browser extension that adds a correction button to text inputs in web pages, allowing users to correct Arabic text.
-2. **Node.js Server**: A backend server that integrates with Google's Gemini AI and MongoDB to correct Arabic text and store correction history.
+- **Client**: Browser extension that provides text correction functionality
+- **Landing**: Next.js landing page showcasing features and offering a demo
+- **Server**: Node.js backend API that processes text correction requests
 
-## Prerequisites
+## Getting Started
 
-- Node.js (version 16+)
-- MongoDB (local installation or cloud-based)
-- Google Gemini API Key
+### Prerequisites
 
-## Setting Up and Running the Server
+- Node.js 14.x or higher
+- npm or yarn
 
-1. **Navigate to the server directory**:
+### Installation
 
-   ```bash
-   cd server
-   ```
-
-2. **Install dependencies**:
-
+1. Clone the repository
+2. Install dependencies for the entire project:
    ```bash
    npm install
    ```
-
-3. **Configure environment variables**:
-   The `.env` file has been set up with:
-
-   - MongoDB URI
-   - Gemini API Key
-   - Port (default: 5000)
-
-4. **Start the server**:
-
+3. Install dependencies for each component:
    ```bash
-   npm start
+   cd client && npm install
+   cd ../landing && npm install
+   cd ../server && npm install
    ```
 
-   The server will be available at `http://localhost:5000`.
+### Development
 
-5. **Verify the server is running**:
-   Open a browser and navigate to `http://localhost:5000`. You should see a success message.
+You can run components individually:
 
-## Using the Extension
+```bash
+# Run the landing page
+npm run dev:landing
 
-1. **Install the extension in Chrome**:
+# Run the server
+npm run dev:server
 
-   - Open Chrome and go to `chrome://extensions/`
-   - Enable "Developer mode"
-   - Click "Load unpacked" and select the `client` directory
+# Run the client/extension
+npm run dev:client
+```
 
-2. **Using the extension on websites**:
-   - The extension adds a "تصحيح" (Correct) button next to Arabic text inputs
-   - Click the button to correct the Arabic text in the input field
-   - The corrected text will replace the original text
+Or run both the landing page and server together:
 
-## How It Works
+```bash
+npm run dev
+```
 
-1. When you click the correction button, the extension sends the Arabic text to the server.
-2. The server processes the text using Google's Gemini AI model, which understands Arabic language nuances.
-3. The corrected text is returned to the extension and displayed to the user.
-4. The correction is stored in the MongoDB database for future reference.
+### Environment Setup
 
-## Troubleshooting
+Create `.env.local` files in each component directory as needed:
 
-### Server Issues
+#### landing/.env.local
 
-- **Cannot connect to MongoDB**:
+```
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
 
-  - Make sure MongoDB is running (`mongod` command)
-  - Check the connection string in the `.env` file
+#### server/.env
 
-- **Gemini API errors**:
-  - Verify the API key in the `.env` file
-  - Check API usage quotas and limits
+```
+PORT=5000
+GEMINI_API_KEY=your_api_key_here
+```
 
-### Extension Issues
+## Features
 
-- **Extension not working**:
+### Browser Extension
 
-  - Check that the server is running
-  - Open the browser's developer console to see error messages
-  - Ensure the extension has been loaded correctly in Chrome
+- Text correction within any input field
+- Grammar and spelling correction
+- Dialect to Fusha (Standard Arabic) conversion
 
-- **No correction buttons appearing**:
-  - The extension only adds buttons to text inputs containing Arabic text
-  - Try refreshing the page
+### Landing Page
 
-## Future Improvements
+- Modern, responsive design
+- Features showcase
+- Pricing plans
+- Interactive demo section
 
-- Add user authentication for the API
-- Improve the UI of the correction button
-- Add support for multiple text correction styles
-- Create a correction history viewer in the extension
-- Add more language correction options
+### Server API
 
-## API Endpoints
+- Text correction endpoint
+- Arabic dialect conversion
+- Integration with Google's Gemini API
 
-- `POST /api/correct`: Corrects the provided Arabic text
+## Technologies Used
 
-  - Request body: `{ "text": "Arabic text to correct" }`
-  - Response: `{ "success": true, "data": { "originalText": "...", "correctedText": "..." } }`
+- React & Next.js
+- Node.js & Express
+- TailwindCSS
+- Google Gemini AI API
+- Chrome Extension API
 
-- `GET /api/corrections`: Retrieves correction history
-  - Query parameters: `page` (default: 1), `limit` (default: 20)
-  - Response: List of past corrections with pagination
+## License
 
-## Acknowledgments
-
-Special thanks to the Salam Hackathon for making this project possible. The hackathon provided the platform, resources, and inspiration needed to create this Arabic language correction tool. We're grateful for the opportunity to contribute to improving Arabic digital communication through technology.
+This project is licensed under the ISC License.

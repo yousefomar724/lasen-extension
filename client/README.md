@@ -1,53 +1,36 @@
-# Arabic Linguistic Correction Extension
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-A browser extension for Arabic linguistic correction that helps users correct Arabic text in any text field on the web.
+## Getting Started
 
-## Features
+First, run the development server:
 
-- Adds a correction button next to any text field on web pages
-- Provides a popup interface for direct text correction
-- Automatically detects Arabic text
-- Corrects common Arabic linguistic errors
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-## Installation
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-### Development Mode
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-1. Clone this repository
-2. Install dependencies:
-   ```
-   npm install
-   ```
-3. Build the extension:
-   ```
-   npm run build
-   ```
-4. Load the extension in your browser:
-   - Chrome: Go to `chrome://extensions/`, enable "Developer mode", click "Load unpacked", and select the `dist` folder
-   - Firefox: Go to `about:debugging#/runtime/this-firefox`, click "Load Temporary Add-on", and select any file in the `dist` folder
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Usage
+## Learn More
 
-### In-page Correction
+To learn more about Next.js, take a look at the following resources:
 
-1. Click on any text field on a webpage
-2. If the field contains Arabic text, a "تصحيح" (Correct) button will appear next to it
-3. Click the button to correct the text in the field
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-### Popup Interface
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-1. Click on the extension icon in your browser toolbar
-2. Enter Arabic text in the text area
-3. Click "تصحيح النص" (Correct Text) to see the corrected version
+## Deploy on Vercel
 
-## Development
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-- `npm run dev` - Starts the development server
-- `npm run build` - Builds the extension for production
-- `npm run preview` - Previews the built extension
-
-## Technical Details
-
-- Built with React and TypeScript
-- Uses Vite for bundling
-- Follows Manifest V3 specifications for modern browser extensions
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
