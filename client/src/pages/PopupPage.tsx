@@ -11,7 +11,7 @@ const PopupPage = () => {
   };
 
   return (
-    <div className="bg-gray-900 min-h-screen p-4">
+    <div className="min-h-screen p-4">
       <div className="container mx-auto">
         <div className="flex justify-between items-center mb-6">
           <button

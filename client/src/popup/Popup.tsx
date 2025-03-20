@@ -1,6 +1,6 @@
 /// <reference types="chrome" />
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 // Correction history interface
 interface Correction {
@@ -28,11 +28,11 @@ interface UserSettings {
 }
 
 const Popup = () => {
-  const [activeTab, setActiveTab] = useState('corrections');
+  const [activeTab, setActiveTab] = useState("corrections");
   const [isEnabled, setIsEnabled] = useState(true);
   const [wordCount] = useState(259);
   const [errorCount] = useState(3);
-  const [saveStatus, setSaveStatus] = useState('');
+  const [saveStatus, setSaveStatus] = useState("");
 
   // Corrections state
   const [corrections, setCorrections] = useState<Correction[]>([]);
@@ -46,7 +46,7 @@ const Popup = () => {
   const [settings, setSettings] = useState<UserSettings>({
     processInputs: true,
     processTextareas: true,
-    processContentEditable: true
+    processContentEditable: true,
   });
 
   // Fetch corrections from the API
@@ -54,7 +54,9 @@ const Popup = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:5000/api/corrections?page=${page}&limit=5`);
+      const response = await fetch(
+        `http://localhost:5000/api/corrections?page=${page}&limit=5`
+      );
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
@@ -67,11 +69,11 @@ const Popup = () => {
         setTotalPages(data.pages);
         setTotalItems(data.total);
       } else {
-        throw new Error('Failed to fetch corrections');
+        throw new Error("Failed to fetch corrections");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      console.error('Error fetching corrections:', err);
+      setError(err instanceof Error ? err.message : "Unknown error");
+      console.error("Error fetching corrections:", err);
     } finally {
       setIsLoading(false);
     }
@@ -79,12 +81,12 @@ const Popup = () => {
 
   // Load settings on initial render
   useEffect(() => {
-    if (typeof chrome !== 'undefined' && chrome.storage) {
+    if (typeof chrome !== "undefined" && chrome.storage) {
       chrome.storage.sync.get(
         {
           processInputs: true,
           processTextareas: true,
-          processContentEditable: true
+          processContentEditable: true,
         },
         (items) => {
           setSettings(items as UserSettings);
@@ -100,7 +102,7 @@ const Popup = () => {
   const handleSettingChange = (setting: keyof UserSettings) => {
     const newSettings = {
       ...settings,
-      [setting]: !settings[setting]
+      [setting]: !settings[setting],
     };
 
     setSettings(newSettings);
@@ -109,15 +111,15 @@ const Popup = () => {
   // Save all settings
   const saveSettings = () => {
     // First show saving status
-    setSaveStatus('جاري الحفظ...');
+    setSaveStatus("جاري الحفظ...");
 
     // Save to Chrome storage
-    if (typeof chrome !== 'undefined' && chrome.storage) {
+    if (typeof chrome !== "undefined" && chrome.storage) {
       chrome.storage.sync.set(settings, () => {
-        console.log('Settings saved:', settings);
+        console.log("Settings saved:", settings);
 
         // Show success message
-        setSaveStatus('تم الحفظ!');
+        setSaveStatus("تم الحفظ!");
 
         // Notify content scripts about the settings change
         if (chrome.tabs) {
@@ -126,38 +128,41 @@ const Popup = () => {
               try {
                 chrome.tabs.sendMessage(
                   tabs[0].id,
-                  { type: 'SETTINGS_UPDATED' },
+                  { type: "SETTINGS_UPDATED" },
                   (response) => {
                     // Handle possible error
                     if (chrome.runtime.lastError) {
-                      console.log('Message passing error:', chrome.runtime.lastError.message);
+                      console.log(
+                        "Message passing error:",
+                        chrome.runtime.lastError.message
+                      );
                       // Still consider settings saved successfully
                     }
 
                     // Clear status after 2 seconds
                     setTimeout(() => {
-                      setSaveStatus('');
+                      setSaveStatus("");
                     }, 2000);
                   }
                 );
               } catch (error) {
-                console.error('Error sending message:', error);
+                console.error("Error sending message:", error);
                 // Still clear status after 2 seconds
                 setTimeout(() => {
-                  setSaveStatus('');
+                  setSaveStatus("");
                 }, 2000);
               }
             } else {
               // No active tab found, but settings are still saved
               setTimeout(() => {
-                setSaveStatus('');
+                setSaveStatus("");
               }, 2000);
             }
           });
         } else {
           // If we can't communicate with tabs, still clear the status
           setTimeout(() => {
-            setSaveStatus('');
+            setSaveStatus("");
           }, 2000);
         }
       });
@@ -166,10 +171,10 @@ const Popup = () => {
 
   // Tabs configuration
   const tabs = [
-    { id: 'corrections', label: 'التصحيحات' },
-    { id: 'settings', label: 'الإعدادات' },
-    { id: 'language', label: 'اللغة' },
-    { id: 'help', label: 'المساعدة' },
+    { id: "corrections", label: "التصحيحات" },
+    { id: "settings", label: "الإعدادات" },
+    { id: "language", label: "اللغة" },
+    { id: "help", label: "المساعدة" },
   ];
 
   // Handle pagination
@@ -181,17 +186,17 @@ const Popup = () => {
   // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('ar-SA', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return date.toLocaleDateString("ar-SA", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   return (
-    <div className="w-[380px] min-h-[500px] p-4 bg-gray-900 rounded-lg shadow-md flex flex-col rtl">
+    <div className="w-[380px] min-h-[500px] p-4 bg-gray-800 rounded-lg shadow-md flex flex-col rtl">
       {/* Header with switch */}
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold text-white">تصحيح</h1>
@@ -202,8 +207,16 @@ const Popup = () => {
             onChange={() => setIsEnabled(!isEnabled)}
             className="opacity-0 w-0 h-0"
           />
-          <span className={`absolute cursor-pointer inset-0 rounded-full transition-all duration-300 ${isEnabled ? 'bg-blue-500' : 'bg-gray-700'}`}>
-            <span className={`absolute h-5 w-5 bg-white rounded-full transition-all duration-300 bottom-0.5 left-0.5 ${isEnabled ? 'transform translate-x-5' : ''}`}></span>
+          <span
+            className={`absolute cursor-pointer inset-0 rounded-full transition-all duration-300 ${
+              isEnabled ? "bg-blue-500" : "bg-gray-700"
+            }`}
+          >
+            <span
+              className={`absolute h-5 w-5 bg-white rounded-full transition-all duration-300 bottom-0.5 left-0.5 ${
+                isEnabled ? "transform translate-x-5" : ""
+              }`}
+            ></span>
           </span>
         </label>
       </div>
@@ -213,10 +226,11 @@ const Popup = () => {
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            className={`px-4 py-2 text-sm transition-all ${activeTab === tab.id
-              ? 'bg-blue-500 text-white rounded-t-md'
-              : 'text-gray-400 hover:text-white'
-              }`}
+            className={`px-4 py-2 text-sm transition-all ${
+              activeTab === tab.id
+                ? "bg-blue-500 text-white rounded-t-md"
+                : "text-gray-400 hover:text-white"
+            }`}
             onClick={() => setActiveTab(tab.id)}
           >
             {tab.label}
@@ -226,18 +240,26 @@ const Popup = () => {
 
       {/* Main Content */}
       <div className="flex-1">
-        {activeTab === 'corrections' && (
+        {activeTab === "corrections" && (
           <>
             {/* Statistics */}
-            <div className="flex justify-between bg-gray-800 rounded-md p-3 mb-4">
+            <div className="flex justify-between bg-gray-900 rounded-md p-3 mb-4">
               <div className="text-right">
-                <span className="block text-gray-400 text-sm mb-1">عدد الكلمات</span>
-                <span className="text-xl font-bold text-white">{wordCount}</span>
+                <span className="block text-gray-400 text-sm mb-1">
+                  عدد الكلمات
+                </span>
+                <span className="text-xl font-bold text-white">
+                  {wordCount}
+                </span>
               </div>
               <div className="text-right">
-                <span className="block text-gray-400 text-sm mb-1">الأخطاء</span>
+                <span className="block text-gray-400 text-sm mb-1">
+                  الأخطاء
+                </span>
                 <div className="flex items-center">
-                  <span className="text-xl font-bold text-white">{errorCount}</span>
+                  <span className="text-xl font-bold text-white">
+                    {errorCount}
+                  </span>
                   {errorCount > 0 && (
                     <span className="inline-block bg-red-500 text-white rounded-full px-2 py-0.5 text-xs font-bold mr-2">
                       {errorCount}
@@ -265,29 +287,38 @@ const Popup = () => {
                   </button>
                 </div>
               ) : corrections.length === 0 ? (
-                <div className="text-center p-5 text-gray-500 bg-gray-800 rounded-md">
+                <div className="text-center p-5 text-gray-500 bg-gray-900 rounded-md">
                   <p>لا توجد تصحيحات سابقة</p>
                 </div>
               ) : (
                 <>
-                  <div className='h-[200px] overflow-y-auto px-2 space-y-2'>
+                  <div className="h-[200px] overflow-y-auto px-2 space-y-2">
                     {corrections.map((correction) => (
-                      <div key={correction._id} className="bg-gray-800 rounded-lg shadow overflow-hidden border border-gray-700">
+                      <div
+                        key={correction._id}
+                        className="bg-gray-900 rounded-lg shadow overflow-hidden border border-gray-700"
+                      >
                         <div className="flex justify-between items-center p-3 bg-gray-700 border-b border-gray-600">
-                          <span className="text-gray-400 text-sm">{formatDate(correction.createdAt)}</span>
+                          <span className="text-gray-400 text-sm">
+                            {formatDate(correction.createdAt)}
+                          </span>
                           {/* <span className="text-xs px-2 py-1 rounded bg-blue-900 text-blue-200">
                           {correction.source === 'extension' ? 'إضافة المتصفح' : 'واجهة برمجة التطبيقات'}
                         </span> */}
                         </div>
                         <div className="p-4">
                           <div className="mb-3">
-                            <p className="font-bold text-gray-300 mb-1">النص الأصلي:</p>
+                            <p className="font-bold text-gray-300 mb-1">
+                              النص الأصلي:
+                            </p>
                             <p className="bg-red-900/20 p-3 rounded border-r-4 border-red-500 font-sans rtl leading-relaxed text-gray-200">
                               {correction.originalText}
                             </p>
                           </div>
                           <div>
-                            <p className="font-bold text-gray-300 mb-1">النص المصحح:</p>
+                            <p className="font-bold text-gray-300 mb-1">
+                              النص المصحح:
+                            </p>
                             <p className="bg-green-900/20 p-3 rounded border-r-4 border-green-500 font-sans rtl leading-relaxed text-gray-200">
                               {correction.correctedText}
                             </p>
@@ -301,45 +332,49 @@ const Popup = () => {
                     <button
                       onClick={() => handlePageChange(currentPage - 1)}
                       disabled={currentPage === 1}
-                      className={`px-3 py-1 rounded font-bold text-sm ${currentPage === 1
-                        ? 'bg-gray-600 cursor-not-allowed text-gray-400'
-                        : 'bg-blue-500 text-white hover:bg-blue-600'
-                        }`}
+                      className={`px-3 py-1 rounded font-bold text-sm ${
+                        currentPage === 1
+                          ? "bg-gray-600 cursor-not-allowed text-gray-400"
+                          : "bg-blue-500 text-white hover:bg-blue-600"
+                      }`}
                     >
                       السابق
                     </button>
 
                     <span className="text-sm text-gray-400">
-                      صفحة {currentPage} من {totalPages} (إجمالي التصحيحات: {totalItems})
+                      صفحة {currentPage} من {totalPages} (إجمالي التصحيحات:{" "}
+                      {totalItems})
                     </span>
 
                     <button
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={currentPage === totalPages}
-                      className={`px-3 py-1 rounded font-bold text-sm ${currentPage === totalPages
-                        ? 'bg-gray-600 cursor-not-allowed text-gray-400'
-                        : 'bg-blue-500 text-white hover:bg-blue-600'
-                        }`}
+                      className={`px-3 py-1 rounded font-bold text-sm ${
+                        currentPage === totalPages
+                          ? "bg-gray-600 cursor-not-allowed text-gray-400"
+                          : "bg-blue-500 text-white hover:bg-blue-600"
+                      }`}
                     >
                       التالي
                     </button>
                   </div>
                 </>
-
               )}
             </div>
           </>
         )}
 
-        {activeTab === 'settings' && (
+        {activeTab === "settings" && (
           <div className="px-4 py-3 rtl">
-            <h2 className="text-sm font-semibold text-white mb-4">عناصر الإدخال المراد تصحيحها</h2>
-            <div className="bg-gray-800 rounded-lg p-3 mb-4">
+            <h2 className="text-sm font-semibold text-white mb-4">
+              عناصر الإدخال المراد تصحيحها
+            </h2>
+            <div className="bg-gray-900 rounded-lg p-3 mb-4">
               <label className="flex items-center py-2 text-sm text-white cursor-pointer">
                 <input
                   type="checkbox"
                   checked={settings.processInputs}
-                  onChange={() => handleSettingChange('processInputs')}
+                  onChange={() => handleSettingChange("processInputs")}
                   className="mr-2 cursor-pointer"
                 />
                 حقول النص (Input)
@@ -349,7 +384,7 @@ const Popup = () => {
                 <input
                   type="checkbox"
                   checked={settings.processTextareas}
-                  onChange={() => handleSettingChange('processTextareas')}
+                  onChange={() => handleSettingChange("processTextareas")}
                   className="mr-2 cursor-pointer"
                 />
                 مناطق النص (Textarea)
@@ -359,7 +394,7 @@ const Popup = () => {
                 <input
                   type="checkbox"
                   checked={settings.processContentEditable}
-                  onChange={() => handleSettingChange('processContentEditable')}
+                  onChange={() => handleSettingChange("processContentEditable")}
                   className="mr-2 cursor-pointer"
                 />
                 المحتوى القابل للتحرير (Contenteditable)
@@ -368,10 +403,13 @@ const Popup = () => {
 
             <div className="flex items-center my-5">
               <button
-                className={`bg-blue-500 text-white border-none rounded px-4 py-2 text-sm cursor-pointer transition-colors ${saveStatus === 'جاري الحفظ...' ? 'bg-gray-500 cursor-not-allowed' : 'hover:bg-blue-600'
-                  }`}
+                className={`bg-blue-500 text-white border-none rounded px-4 py-2 text-sm cursor-pointer transition-colors ${
+                  saveStatus === "جاري الحفظ..."
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "hover:bg-blue-600"
+                }`}
                 onClick={saveSettings}
-                disabled={saveStatus === 'جاري الحفظ...'}
+                disabled={saveStatus === "جاري الحفظ..."}
               >
                 حفظ الإعدادات
               </button>
@@ -382,8 +420,9 @@ const Popup = () => {
               )}
             </div>
 
-            <p className="text-xs text-gray-400 leading-relaxed mt-3 bg-gray-800/70 border border-gray-700 rounded-md p-3">
-              يمكنك تحديد أنواع عناصر الإدخال التي تريد أن يعمل عليها المصحح. ستظهر أزرار التصحيح فقط بجانب العناصر المحددة.
+            <p className="text-xs text-gray-400 leading-relaxed mt-3 bg-gray-900/70 border border-gray-700 rounded-md p-3">
+              يمكنك تحديد أنواع عناصر الإدخال التي تريد أن يعمل عليها المصحح.
+              ستظهر أزرار التصحيح فقط بجانب العناصر المحددة.
             </p>
           </div>
         )}
@@ -398,4 +437,4 @@ const Popup = () => {
   );
 };
 
-export default Popup; 
+export default Popup;
