@@ -1,6 +1,27 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 :root {
-	direction: rtl;
+  direction: rtl;
 }
 
+/* Fix for toggle switches in RTL layout */
+.toggle-switch {
+  direction: ltr;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Correct the switch position in RTL context */
+.toggle-switch span {
+  transform-origin: center;
+}
+
+/* Additional padding for popup content */
+.popup-content {
+  padding: 12px;
+}
+
+/* Add some spacing between elements */
+.spaced-content > * {
+  margin-bottom: 8px;
+}

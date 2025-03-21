@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Arabic Linguistic Correction",
   "version": "1.0.0",
-  "description": "A browser extension for Arabic linguistic correction",
+  "description": "A browser extension for Arabic linguistic correction and dialect conversion",
   "action": {
     "default_popup": "index.html",
     "default_icon": {
@@ -16,8 +16,11 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["activeTab", "storage"],
-  "host_permissions": ["http://localhost:3000/*"],
+  "permissions": ["activeTab", "storage", "contextMenus", "tabs"],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://lasen-extension.vercel.app/*"
+  ],
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
@@ -28,5 +31,8 @@
   "background": {
     "service_worker": "src/background.js",
     "type": "module"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
   }
 }

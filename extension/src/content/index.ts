@@ -48,6 +48,36 @@ const BUTTON_STYLES = `
   transform: scale(1);
 `
 
+// Styles for dropdown menu
+const DROPDOWN_STYLES = `
+  position: absolute;
+  z-index: 10001;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  top: 100%;
+  margin-top: 5px;
+  right: 0;
+  min-width: 180px;
+  direction: rtl;
+`
+
+const MENU_ITEM_STYLES = `
+  padding: 8px 12px;
+  font-size: 14px;
+  border-bottom: 1px solid #eee;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-align: right;
+  display: flex;
+  align-items: center;
+  flex-direction: row-reverse;
+`
+
 // Hover effects are set dynamically in the event handlers
 // See setupButtonEvents function for implementation
 
@@ -88,6 +118,31 @@ const HIGHLIGHT_STYLES = `
     0% { opacity: 0.7; }
     50% { opacity: 1; }
     100% { opacity: 0.7; }
+  }
+  
+  .arabic-correction-dropdown {
+    ${DROPDOWN_STYLES}
+  }
+  
+  .arabic-correction-menu-item {
+    ${MENU_ITEM_STYLES}
+  }
+  
+  .arabic-correction-menu-item:hover {
+    background-color: #f0f0f0;
+  }
+  
+  .arabic-correction-menu-header {
+    ${MENU_ITEM_STYLES}
+    font-weight: bold;
+    background-color: #f5f5f5;
+    pointer-events: none;
+  }
+  
+  .arabic-correction-menu-separator {
+    height: 1px;
+    background-color: #eee;
+    margin: 4px 0;
   }
 `
 
@@ -212,7 +267,7 @@ function addCorrectionButtons() {
       // Update the HTML content and styles of the reused button
       button.innerHTML = CORRECTION_ICON
       button.style.cssText = BUTTON_STYLES
-      button.title = "تصحيح النص" // Add tooltip: "Correct text" in Arabic
+      button.title = "تصحيح النص أو تحويل اللهجة" // Updated tooltip: "Correct text or convert dialect" in Arabic
 
       // Ensure icon is centered
       ensureIconCentered(button)
@@ -223,7 +278,7 @@ function addCorrectionButtons() {
       button.className = "arabic-correction-button"
       button.style.cssText = BUTTON_STYLES
       button.style.display = "none"
-      button.title = "تصحيح النص" // Add tooltip: "Correct text" in Arabic
+      button.title = "تصحيح النص أو تحويل اللهجة" // Updated tooltip: "Correct text or convert dialect" in Arabic
 
       // Ensure icon is centered
       ensureIconCentered(button)
@@ -275,26 +330,180 @@ function addCorrectionButtons() {
 
 // Set up event handlers for a button and its associated input element
 function setupButtonEvents(button: HTMLButtonElement, field: HTMLElement) {
-  // Add click event
-  button.addEventListener("click", () => {
-    // Get the text from the field
-    let text = ""
-    if (
-      field instanceof HTMLInputElement ||
-      field instanceof HTMLTextAreaElement
-    ) {
-      text = field.value
-    } else if (field.getAttribute("contenteditable") === "true") {
-      text = field.innerText || field.textContent || ""
+  // Create dropdown menu for the button
+  const dropdown = document.createElement("div")
+  dropdown.className = "arabic-correction-dropdown"
+  dropdown.innerHTML = `
+    <div class="arabic-correction-menu-header">اختر العملية</div>
+    <div class="arabic-correction-menu-item" data-action="correct">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 8px; display: inline;">
+        <path d="M12 20h9"></path>
+        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+      </svg>
+      تصحيح النص
+    </div>
+    <div class="arabic-correction-menu-separator"></div>
+    <div class="arabic-correction-menu-header">تحويل اللهجة إلى:</div>
+    <div class="arabic-correction-menu-item" data-action="dialect" data-dialect="egyptian">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 8px; display: inline;">
+        <path d="M12 2v8"></path><path d="m16 6-4 4-4-4"></path><path d="M8 16h8"></path><path d="M10 20h4"></path>
+      </svg>
+      المصرية
+    </div>
+    <div class="arabic-correction-menu-item" data-action="dialect" data-dialect="levantine">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 8px; display: inline;">
+        <path d="M12 2v8"></path><path d="m16 6-4 4-4-4"></path><path d="M8 16h8"></path><path d="M10 20h4"></path>
+      </svg>
+      الشامية
+    </div>
+    <div class="arabic-correction-menu-item" data-action="dialect" data-dialect="gulf">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 8px; display: inline;">
+        <path d="M12 2v8"></path><path d="m16 6-4 4-4-4"></path><path d="M8 16h8"></path><path d="M10 20h4"></path>
+      </svg>
+      الخليجية
+    </div>
+    <div class="arabic-correction-menu-item" data-action="dialect" data-dialect="moroccan">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 8px; display: inline;">
+        <path d="M12 2v8"></path><path d="m16 6-4 4-4-4"></path><path d="M8 16h8"></path><path d="M10 20h4"></path>
+      </svg>
+      المغربية
+    </div>
+  `
+
+  // Set initial styles for dropdown
+  dropdown.style.position = "absolute"
+  dropdown.style.display = "none"
+
+  // Add dropdown to document body instead of button
+  document.body.appendChild(dropdown)
+
+  // Toggle dropdown on button click
+  button.addEventListener("click", (e) => {
+    e.stopPropagation() // Prevent triggering document click event immediately
+
+    // Only check for text if dropdown is visible
+    // (to prevent opening empty dropdown)
+    // Will still allow empty dropdown to toggle closed
+    if (dropdown.style.display !== "flex") {
+      // Check if there's text to process
+      let hasText = false
+      if (
+        field instanceof HTMLInputElement ||
+        field instanceof HTMLTextAreaElement
+      ) {
+        hasText = !!field.value.trim()
+      } else if (field.getAttribute("contenteditable") === "true") {
+        hasText = !!(field.innerText || field.textContent || "").trim()
+      }
+
+      // Log but still show dropdown
+      if (!hasText) {
+        console.log("No text to process, but showing options")
+      }
     }
 
-    if (!text.trim()) {
-      console.log("No text to correct")
-      return
+    // Toggle dropdown display
+    const isVisible = dropdown.style.display === "flex"
+
+    // First hide all other dropdowns
+    document.querySelectorAll(".arabic-correction-dropdown").forEach((el) => {
+      if (el !== dropdown) {
+        ;(el as HTMLElement).style.display = "none"
+      }
+    })
+
+    if (isVisible) {
+      dropdown.style.display = "none"
+    } else {
+      // Position dropdown relative to button
+      const buttonRect = button.getBoundingClientRect()
+
+      dropdown.style.display = "flex"
+      dropdown.style.top = `${buttonRect.bottom + window.scrollY + 5}px`
+      dropdown.style.left = `${buttonRect.left + window.scrollX}px`
+      dropdown.style.zIndex = "10001"
+
+      // Ensure dropdown is visible within viewport
+      setTimeout(() => {
+        const dropdownRect = dropdown.getBoundingClientRect()
+        const viewportWidth = window.innerWidth
+        const viewportHeight = window.innerHeight
+
+        // Check if dropdown extends beyond right edge of viewport
+        if (dropdownRect.right > viewportWidth) {
+          const rightEdgeOffset = dropdownRect.right - viewportWidth
+          dropdown.style.left = `${
+            buttonRect.left + window.scrollX - rightEdgeOffset - 10
+          }px`
+        }
+
+        // Check if dropdown extends beyond bottom of viewport
+        if (dropdownRect.bottom > viewportHeight) {
+          // Show dropdown above the button instead
+          dropdown.style.top = `${
+            buttonRect.top + window.scrollY - dropdownRect.height - 5
+          }px`
+        }
+      }, 0)
+    }
+  })
+
+  // Handle dropdown item clicks
+  dropdown.addEventListener("click", (e) => {
+    e.stopPropagation()
+
+    // Find the closest menu item (in case user clicked on the SVG or path)
+    const menuItem = (e.target as HTMLElement).closest(
+      ".arabic-correction-menu-item"
+    )
+    if (!menuItem) return
+
+    const action = menuItem.getAttribute("data-action")
+
+    if (action === "correct") {
+      correctText(field)
+    } else if (action === "dialect") {
+      const dialect = menuItem.getAttribute("data-dialect")
+      if (dialect) {
+        let text = ""
+        if (
+          field instanceof HTMLInputElement ||
+          field instanceof HTMLTextAreaElement
+        ) {
+          text = field.value
+        } else if (field.getAttribute("contenteditable") === "true") {
+          text = field.innerText || field.textContent || ""
+        }
+
+        if (text.trim()) {
+          // We'll create a selection but also pass the field directly
+          // to ensure proper update when using the dropdown
+          const tempSelection = document.createRange()
+          tempSelection.selectNodeContents(field)
+          const selection = window.getSelection()
+          if (selection) {
+            selection.removeAllRanges()
+            selection.addRange(tempSelection)
+
+            // Pass the field to explicitly indicate where to update the text
+            processDialectConversionFromDropdown(
+              text,
+              selection,
+              dialect,
+              field
+            )
+          }
+        }
+      }
     }
 
-    // Correct the text
-    correctText(field)
+    // Hide dropdown after action
+    dropdown.style.display = "none"
+  })
+
+  // Close dropdown when clicking outside
+  document.addEventListener("click", () => {
+    dropdown.style.display = "none"
   })
 
   // Add hover effects
@@ -318,12 +527,24 @@ function setupButtonEvents(button: HTMLButtonElement, field: HTMLElement) {
   })
 
   field.addEventListener("blur", (e) => {
-    // Don't hide if user clicked our button
-    if (e.relatedTarget !== button) {
+    // Don't hide if user clicked our button or dropdown
+    if (
+      e.relatedTarget !== button &&
+      e.relatedTarget !== dropdown &&
+      !button.contains(e.relatedTarget as Node) &&
+      !dropdown.contains(e.relatedTarget as Node)
+    ) {
       // Add small delay to allow button click to register
       setTimeout(() => {
-        if (document.activeElement !== button) {
+        if (
+          document.activeElement !== button &&
+          document.activeElement !== dropdown &&
+          !button.contains(document.activeElement) &&
+          !dropdown.contains(document.activeElement)
+        ) {
           button.style.display = "none"
+          dropdown.style.display = "none"
+
           if (activeField === field) {
             activeField = null
           }
@@ -333,12 +554,42 @@ function setupButtonEvents(button: HTMLButtonElement, field: HTMLElement) {
   })
 
   // Update button position on scroll and resize
-  window.addEventListener("scroll", () => updateButtonPosition(button, field), {
-    passive: true,
-  })
-  window.addEventListener("resize", () => updateButtonPosition(button, field), {
-    passive: true,
-  })
+  window.addEventListener(
+    "scroll",
+    () => {
+      updateButtonPosition(button, field)
+
+      // Update dropdown position if it's visible
+      if (dropdown.style.display === "flex") {
+        const buttonRect = button.getBoundingClientRect()
+        dropdown.style.top = `${buttonRect.bottom + window.scrollY + 5}px`
+        dropdown.style.left = `${buttonRect.left + window.scrollX}px`
+      }
+    },
+    {
+      passive: true,
+    }
+  )
+
+  window.addEventListener(
+    "resize",
+    () => {
+      updateButtonPosition(button, field)
+
+      // Update dropdown position if it's visible
+      if (dropdown.style.display === "flex") {
+        const buttonRect = button.getBoundingClientRect()
+        dropdown.style.top = `${buttonRect.bottom + window.scrollY + 5}px`
+        dropdown.style.left = `${buttonRect.left + window.scrollX}px`
+      }
+    },
+    {
+      passive: true,
+    }
+  )
+
+  // Store reference to dropdown on button for cleanup
+  button.dataset.dropdownId = dropdown.id = `dropdown-${button.id}`
 }
 
 // Update button position relative to the field
@@ -1218,31 +1469,69 @@ chrome.runtime.onMessage.addListener(
   }
 )
 
+// Handle messages from content script to background script
+function sendMessageToBackground(message: any): Promise<any> {
+  return new Promise((resolve, reject) => {
+    try {
+      chrome.runtime.sendMessage(message, (response) => {
+        // Check for error
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message || "Unknown error"))
+          return
+        }
+
+        resolve(response)
+      })
+    } catch (error) {
+      console.error("Error sending message to background:", error)
+      reject(error)
+    }
+  })
+}
+
 // Function to process text correction
 async function processTextCorrection(text: string, selection: Selection) {
   try {
-    // Call the API for correction
-    const apiUrl = "http://localhost:3000/api/correct"
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ text }),
+    // Call the background script to handle the API request
+    const response = await sendMessageToBackground({
+      type: "CORRECT_TEXT",
+      text: text,
     })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`)
-    }
-
-    const data = await response.json()
-
-    if (data.correctedText) {
+    if (response && response.correctedText) {
       // Replace the selected text with the corrected text
-      replaceSelectedText(selection, data.correctedText)
+      replaceSelectedText(selection, response.correctedText)
+    } else {
+      console.error(
+        "Received invalid response from background script:",
+        response
+      )
+      // Call the API directly as fallback
+      const apiUrl = "https://lasen-extension.vercel.app/api/correct"
+      const directResponse = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text }),
+      })
+
+      if (!directResponse.ok) {
+        throw new Error(`Direct API call failed: ${directResponse.status}`)
+      }
+
+      const data = await directResponse.json()
+
+      if (data.correctedText) {
+        // Replace the selected text with the corrected text
+        replaceSelectedText(selection, data.correctedText)
+      } else {
+        throw new Error("Invalid API response format")
+      }
     }
   } catch (error) {
     console.error("Error correcting text:", error)
+    alert("حدث خطأ أثناء تصحيح النص. يرجى المحاولة مرة أخرى.")
   }
 }
 
@@ -1253,34 +1542,82 @@ async function processDialectConversion(
   dialect: string
 ) {
   try {
-    // Full URL for the API endpoint
-    const baseUrl = "http://localhost:3000"
-    const apiUrl = `${baseUrl}/api/dialect`
+    console.log(`Converting text to ${dialect} dialect:`, text)
 
-    // Call the API for dialect conversion
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ text, dialect }),
+    // Call the background script to handle the API request
+    const response = await sendMessageToBackground({
+      type: "CONVERT_DIALECT",
+      text: text,
+      dialect: dialect,
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error(`API returned ${response.status}: ${errorText}`)
-      throw new Error(
-        `HTTP error! Status: ${response.status}, Details: ${errorText}`
+    if (response && response.convertedText) {
+      console.log(
+        "Successfully received converted text:",
+        response.convertedText
       )
-    }
 
-    const data = await response.json()
+      // Check if the selection is from an input field or contenteditable
+      const container = selection.getRangeAt(0).commonAncestorContainer
+      const targetElement =
+        container.nodeType === Node.TEXT_NODE
+          ? container.parentElement
+          : (container as HTMLElement)
 
-    if (data.convertedText) {
-      // Replace the selected text with the converted text
-      replaceSelectedText(selection, data.convertedText)
+      let inputField: HTMLElement | null = null
+
+      // Find the parent input field
+      if (targetElement) {
+        // Check if it's already an input field
+        if (
+          targetElement instanceof HTMLInputElement ||
+          targetElement instanceof HTMLTextAreaElement ||
+          (targetElement instanceof HTMLElement &&
+            targetElement.hasAttribute("contenteditable"))
+        ) {
+          inputField = targetElement
+        } else if (targetElement instanceof HTMLElement) {
+          // Find closest input field ancestor
+          const closest = targetElement.closest(
+            "input, textarea, [contenteditable]"
+          )
+          if (closest) {
+            inputField = closest as HTMLElement
+          }
+        }
+      }
+
+      if (inputField) {
+        // Update input field directly
+        if (
+          inputField instanceof HTMLInputElement ||
+          inputField instanceof HTMLTextAreaElement
+        ) {
+          // For input and textarea elements
+          inputField.value = response.convertedText
+          // Trigger input event to notify other scripts of the change
+          inputField.dispatchEvent(new Event("input", { bubbles: true }))
+          console.log("Updated input field value")
+          return
+        } else if (inputField.hasAttribute("contenteditable")) {
+          // For contenteditable elements
+          inputField.innerText = response.convertedText
+          inputField.dispatchEvent(new InputEvent("input", { bubbles: true }))
+          console.log("Updated contenteditable text")
+          return
+        }
+      }
+
+      // Fallback: Replace the selected text
+      replaceSelectedText(selection, response.convertedText)
+      console.log("Used fallback selection replacement")
     } else {
-      alert("خطأ في تحويل النص. يرجى المحاولة مرة أخرى.")
+      console.error("Invalid response:", response)
+      if (response && response.error) {
+        alert(`خطأ: ${response.error}`)
+      } else {
+        alert("حدث خطأ أثناء تحويل النص. يرجى المحاولة مرة أخرى.")
+      }
     }
   } catch (error) {
     console.error("Error converting dialect:", error)
@@ -1293,4 +1630,61 @@ function replaceSelectedText(selection: Selection, newText: string) {
   const range = selection.getRangeAt(0)
   range.deleteContents()
   range.insertNode(document.createTextNode(newText))
+}
+
+// Special version of processDialectConversion that knows about the source field
+async function processDialectConversionFromDropdown(
+  text: string,
+  selection: Selection,
+  dialect: string,
+  sourceField: HTMLElement
+) {
+  try {
+    console.log(`Converting text to ${dialect} dialect from dropdown:`, text)
+
+    // Call the background script to handle the API request
+    const response = await sendMessageToBackground({
+      type: "CONVERT_DIALECT",
+      text: text,
+      dialect: dialect,
+    })
+
+    if (response && response.convertedText) {
+      console.log(
+        "Successfully received converted text:",
+        response.convertedText
+      )
+
+      // Update the field directly since we know which field it is
+      if (
+        sourceField instanceof HTMLInputElement ||
+        sourceField instanceof HTMLTextAreaElement
+      ) {
+        // For input and textarea elements
+        sourceField.value = response.convertedText
+        // Trigger input event to notify other scripts of the change
+        sourceField.dispatchEvent(new Event("input", { bubbles: true }))
+        console.log("Updated input field value from dropdown")
+      } else if (sourceField.hasAttribute("contenteditable")) {
+        // For contenteditable elements
+        sourceField.innerText = response.convertedText
+        sourceField.dispatchEvent(new InputEvent("input", { bubbles: true }))
+        console.log("Updated contenteditable text from dropdown")
+      } else {
+        // Fallback to selection replacement
+        replaceSelectedText(selection, response.convertedText)
+        console.log("Used selection replacement as fallback")
+      }
+    } else {
+      console.error("Invalid response:", response)
+      if (response && response.error) {
+        alert(`خطأ: ${response.error}`)
+      } else {
+        alert("حدث خطأ أثناء تحويل النص. يرجى المحاولة مرة أخرى.")
+      }
+    }
+  } catch (error) {
+    console.error("Error converting dialect from dropdown:", error)
+    alert("حدث خطأ أثناء تحويل النص. يرجى المحاولة مرة أخرى.")
+  }
 }

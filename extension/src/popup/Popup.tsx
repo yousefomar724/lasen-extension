@@ -27,10 +27,11 @@ interface UserSettings {
   processTextareas: boolean
   processContentEditable: boolean
   instantCheck: boolean
+  defaultDialect: string
 }
 
 const Popup = () => {
-  const [activeTab, setActiveTab] = useState("corrections")
+  const [activeTab, setActiveTab] = useState("features")
   const [isEnabled, setIsEnabled] = useState(true)
   const [wordCount] = useState(259)
   const [errorCount] = useState(3)
@@ -50,6 +51,7 @@ const Popup = () => {
     processTextareas: true,
     processContentEditable: true,
     instantCheck: false,
+    defaultDialect: "egyptian",
   })
 
   // Fetch corrections from the API
@@ -58,7 +60,7 @@ const Popup = () => {
     setError(null)
     try {
       const response = await fetch(
-        `http://localhost:5000/api/corrections?page=${page}&limit=5`
+        `https://lasen-extension.vercel.app/api/corrections?page=${page}&limit=5`
       )
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`)
@@ -82,7 +84,7 @@ const Popup = () => {
     }
   }
 
-  // Load settings on initial render
+  // Load settings and last active tab on initial render
   useEffect(() => {
     if (typeof chrome !== "undefined" && chrome.storage) {
       chrome.storage.sync.get(
@@ -91,9 +93,15 @@ const Popup = () => {
           processTextareas: true,
           processContentEditable: true,
           instantCheck: false,
+          defaultDialect: "egyptian",
+          lastActiveTab: "features",
         },
         (items) => {
           setSettings(items as UserSettings)
+          // Set the last active tab
+          if (items.lastActiveTab) {
+            setActiveTab(items.lastActiveTab as string)
+          }
         }
       )
     }
@@ -102,10 +110,23 @@ const Popup = () => {
     fetchCorrections()
   }, [])
 
+  // Save the active tab when it changes
+  useEffect(() => {
+    if (typeof chrome !== "undefined" && chrome.storage) {
+      chrome.storage.sync.set({ lastActiveTab: activeTab })
+    }
+  }, [activeTab])
+
   // Handle individual setting change
-  const handleSettingChange = (setting: keyof UserSettings) => {
+  const handleSettingChange = (
+    setting: keyof UserSettings,
+    value?: string | boolean
+  ) => {
     setSettings((prev) => {
-      const newSettings = { ...prev, [setting]: !prev[setting] }
+      const newSettings = {
+        ...prev,
+        [setting]: value !== undefined ? value : !prev[setting],
+      }
 
       if (typeof chrome !== "undefined" && chrome.storage) {
         chrome.storage.sync.set(newSettings)
@@ -169,45 +190,89 @@ const Popup = () => {
   // Render the feature tab content
   const renderFeatures = () => {
     return (
-      <div className="py-4 px-2">
+      <div className="py-2">
         <div className="text-center mb-6">
           <h2 className="text-lg font-bold mb-2">معالجة النص</h2>
           <p className="text-gray-300 text-sm mb-4">
             اختر العملية المطلوبة لتطبيقها على النص المحدد
           </p>
 
-          <button
-            onClick={handleCorrection}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg mb-4 w-full transition-colors"
-          >
-            تصحيح النص
-          </button>
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <button
+              onClick={handleCorrection}
+              className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg transition-colors"
+            >
+              تصحيح النص
+            </button>
+            <button
+              onClick={() => handleDialectConversion(settings.defaultDialect)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition-colors"
+            >
+              تحويل للهجة الافتراضية
+            </button>
+          </div>
 
           <h3 className="text-md font-bold mt-4 mb-2">تحويل اللهجة</h3>
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => handleDialectConversion("egyptian")}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition-colors"
+              className={`px-3 py-2 rounded-lg transition-colors ${
+                settings.defaultDialect === "egyptian"
+                  ? "bg-blue-700 text-white border border-blue-500"
+                  : "bg-blue-600 hover:bg-blue-700 text-white"
+              }`}
             >
               المصرية
+              {settings.defaultDialect === "egyptian" && (
+                <span className="block text-xs mt-1 text-blue-300">
+                  (افتراضي)
+                </span>
+              )}
             </button>
             <button
               onClick={() => handleDialectConversion("levantine")}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition-colors"
+              className={`px-3 py-2 rounded-lg transition-colors ${
+                settings.defaultDialect === "levantine"
+                  ? "bg-blue-700 text-white border border-blue-500"
+                  : "bg-blue-600 hover:bg-blue-700 text-white"
+              }`}
             >
               الشامية
+              {settings.defaultDialect === "levantine" && (
+                <span className="block text-xs mt-1 text-blue-300">
+                  (افتراضي)
+                </span>
+              )}
             </button>
             <button
               onClick={() => handleDialectConversion("gulf")}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition-colors"
+              className={`px-3 py-2 rounded-lg transition-colors ${
+                settings.defaultDialect === "gulf"
+                  ? "bg-blue-700 text-white border border-blue-500"
+                  : "bg-blue-600 hover:bg-blue-700 text-white"
+              }`}
             >
               الخليجية
+              {settings.defaultDialect === "gulf" && (
+                <span className="block text-xs mt-1 text-blue-300">
+                  (افتراضي)
+                </span>
+              )}
             </button>
             <button
               onClick={() => handleDialectConversion("moroccan")}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition-colors"
+              className={`px-3 py-2 rounded-lg transition-colors ${
+                settings.defaultDialect === "moroccan"
+                  ? "bg-blue-700 text-white border border-blue-500"
+                  : "bg-blue-600 hover:bg-blue-700 text-white"
+              }`}
             >
               المغربية
+              {settings.defaultDialect === "moroccan" && (
+                <span className="block text-xs mt-1 text-blue-300">
+                  (افتراضي)
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -218,20 +283,20 @@ const Popup = () => {
   // Render settings tab content
   const renderSettings = () => {
     return (
-      <div className="py-4 px-2">
+      <div className="py-2">
         <h2 className="text-lg font-bold mb-4">الإعدادات</h2>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <label className="text-sm">معالجة حقول الإدخال:</label>
             <div
               onClick={() => handleSettingChange("processInputs")}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors toggle-switch ${
                 settings.processInputs ? "bg-green-600" : "bg-gray-600"
               }`}
             >
               <span
                 className={`inline-block h-5 w-5 rounded-full bg-white transition-transform ${
-                  settings.processInputs ? "translate-x-6" : "translate-x-1"
+                  settings.processInputs ? "translate-x-1" : "translate-x-6"
                 }`}
               />
             </div>
@@ -241,13 +306,13 @@ const Popup = () => {
             <label className="text-sm">معالجة حقول النص المتعدد:</label>
             <div
               onClick={() => handleSettingChange("processTextareas")}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors toggle-switch ${
                 settings.processTextareas ? "bg-green-600" : "bg-gray-600"
               }`}
             >
               <span
                 className={`inline-block h-5 w-5 rounded-full bg-white transition-transform ${
-                  settings.processTextareas ? "translate-x-6" : "translate-x-1"
+                  settings.processTextareas ? "translate-x-1" : "translate-x-6"
                 }`}
               />
             </div>
@@ -257,15 +322,15 @@ const Popup = () => {
             <label className="text-sm">معالجة محتوى قابل للتحرير:</label>
             <div
               onClick={() => handleSettingChange("processContentEditable")}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors toggle-switch ${
                 settings.processContentEditable ? "bg-green-600" : "bg-gray-600"
               }`}
             >
               <span
                 className={`inline-block h-5 w-5 rounded-full bg-white transition-transform ${
                   settings.processContentEditable
-                    ? "translate-x-6"
-                    : "translate-x-1"
+                    ? "translate-x-1"
+                    : "translate-x-6"
                 }`}
               />
             </div>
@@ -275,16 +340,34 @@ const Popup = () => {
             <label className="text-sm">تصحيح تلقائي فوري للكلمات:</label>
             <div
               onClick={() => handleSettingChange("instantCheck")}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors toggle-switch ${
                 settings.instantCheck ? "bg-green-600" : "bg-gray-600"
               }`}
             >
               <span
                 className={`inline-block h-5 w-5 rounded-full bg-white transition-transform ${
-                  settings.instantCheck ? "translate-x-6" : "translate-x-1"
+                  settings.instantCheck ? "translate-x-1" : "translate-x-6"
                 }`}
               />
             </div>
+          </div>
+
+          <div className="mt-4 border-t border-gray-700 pt-4">
+            <label className="text-sm block mb-2">
+              اللهجة الافتراضية للتحويل:
+            </label>
+            <select
+              value={settings.defaultDialect}
+              onChange={(e) =>
+                handleSettingChange("defaultDialect", e.target.value)
+              }
+              className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+            >
+              <option value="egyptian">المصرية</option>
+              <option value="levantine">الشامية</option>
+              <option value="gulf">الخليجية</option>
+              <option value="moroccan">المغربية</option>
+            </select>
           </div>
 
           {saveStatus && (
@@ -299,16 +382,19 @@ const Popup = () => {
     <div className="w-80 bg-gray-800 text-white min-h-96 rounded overflow-hidden shadow-lg">
       {/* Header */}
       <div className="bg-gray-900 py-3 px-4 flex items-center justify-between border-b border-gray-700">
-        <h1 className="text-xl font-bold">أداة تصحيح العربية</h1>
+        <div className="flex items-center">
+          <img src="/imgs/logo.png" alt="Logo" className="h-8 w-8 mr-2" />
+          <h1 className="text-xl font-bold">أداة تصحيح العربية</h1>
+        </div>
         <div
           onClick={() => setIsEnabled(!isEnabled)}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors toggle-switch ${
             isEnabled ? "bg-green-600" : "bg-gray-600"
           }`}
         >
           <span
             className={`inline-block h-5 w-5 rounded-full bg-white transition-transform ${
-              isEnabled ? "translate-x-6" : "translate-x-1"
+              isEnabled ? "translate-x-1" : "translate-x-6"
             }`}
           />
         </div>
@@ -349,7 +435,7 @@ const Popup = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="h-80 overflow-y-auto">
+      <div className="h-80 overflow-y-auto p-4">
         {activeTab === "features" && renderFeatures()}
         {activeTab === "corrections" && (
           <>
