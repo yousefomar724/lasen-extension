@@ -15,7 +15,7 @@ import { buttonVariants } from "./ui/button"
 const navItems = [
   { label: "الرئيسية", href: "#", isActive: true },
   { label: "الميزات", href: "#features" },
-  { label: "التسعير", href: "#pricing" },
+  // { label: "التسعير", href: "#pricing" },
 ]
 
 export function Navigation() {
@@ -23,7 +23,7 @@ export function Navigation() {
     <>
       {/* Fixed header with very high z-index and more transparency */}
       <div className="fixed top-0 left-0 right-0 w-full bg-gray-900/40 backdrop-blur-md shadow-md z-[9999]">
-        <div className="container mx-auto flex justify-between items-center py-4">
+        <div className="container mx-auto flex justify-between items-center p-2">
           {/* Logo */}
           <div className="flex items-center">
             <Image
@@ -56,14 +56,10 @@ export function Navigation() {
 
           {/* Desktop Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="secondary" size="sm">
-              تسجيل دخول
-            </Button>
             <a
               href="#try-it"
               className={cn(
-                buttonVariants({ variant: "default", size: "sm" }),
-                "text-white hover:text-gray-300 transition-colors"
+                buttonVariants({ variant: "secondary", size: "sm" })
               )}
             >
               تجربة مجانية
@@ -75,7 +71,7 @@ export function Navigation() {
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-white">
-                  <AlignJustify size={20} />
+                  <AlignJustify className="!w-6 !h-6" />
                   <span className="sr-only">Toggle menu</span>
                 </Button>
               </SheetTrigger>
@@ -115,13 +111,6 @@ export function Navigation() {
                   <div className="pt-4 mt-4 border-t border-gray-700/30">
                     <Button
                       variant="secondary"
-                      size="sm"
-                      className="w-full mb-2 justify-center"
-                    >
-                      تسجيل دخول
-                    </Button>
-                    <Button
-                      variant="default"
                       size="sm"
                       className="w-full justify-center"
                     >

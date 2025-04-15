@@ -4,7 +4,10 @@ import Image from "next/image"
 
 export function Footer() {
   return (
-    <footer id="footer" className="bg-gray-900 py-16 border-t border-gray-800">
+    <footer
+      id="footer"
+      className="bg-gray-900 pt-16 pb-6 border-t border-gray-800"
+    >
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 text-center md:text-right">
           {/* Logo and description */}
@@ -36,11 +39,6 @@ export function Footer() {
                   الميزات
                 </a>
               </li>
-              <li>
-                <a href="#pricing" className="text-gray-400 hover:text-white">
-                  التسعير
-                </a>
-              </li>
             </ul>
           </div>
 
@@ -50,16 +48,16 @@ export function Footer() {
             <ul className="space-y-3">
               <li>
                 <a href="#" className="text-gray-400 hover:text-white">
-                  المساعدة
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-400 hover:text-white">
                   الأسئلة الشائعة
                 </a>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-white">
+                <a
+                  href="https://wa.me/201100124479"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-white"
+                >
                   اتصل بنا
                 </a>
               </li>
